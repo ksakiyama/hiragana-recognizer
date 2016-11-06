@@ -1,6 +1,6 @@
-imgs
-result
-result*
-sample*
+imgs/
+result/
+zips/
+ETL*/
 old
 *tar.gz
