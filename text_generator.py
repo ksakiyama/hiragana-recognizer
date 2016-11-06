@@ -6,8 +6,13 @@ import random
 # 画像の保存先
 srcdir = 'imgs'
 
-# 学習に使う画像枚数
-train_size = 9600
+
+def fild_all_files(directory):
+    for root, dirs, files in os.walk(directory):
+        if not os.path.isdir(root):
+            yield root
+        for file in files:
+            yield os.path.join(root, file)
 
 
 def save_text(textnm, images):
@@ -22,7 +27,9 @@ def save_text(textnm, images):
 def main():
     # 画像のリストを取得
     # ランダムに並び替え、先頭からtrain_sizeを学習データにする
-    images = os.listdir(srcdir)
+    images = list(fild_all_files(srcdir))
+
+    train_size = int(len(images) * 0.8)
     random.shuffle(images)
     trains = images[:train_size]
     tests = images[train_size:]
