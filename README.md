@@ -32,5 +32,6 @@ python dnn_trainer.py traindata.txt testdata.txt --gpu 0 --epoch 10
 ```
 
 ## メモ
-* 正解率は最高で99.3%くらいです
+* 正解率は最高で99.4%くらいです
 * Geforce GTX 980Tiなら10分程度で学習が完了します
+* メモリ使用量は4GBほどです
