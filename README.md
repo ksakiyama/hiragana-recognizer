@@ -6,8 +6,10 @@
   * DNN(DeepNeuralNetwork)、CNNを学習させるスクリプト
 * recognizer.py
   + dnn_trainer.pyで学習させたネットワークを使い、間違えた画像とその予測値を表示する
-* text_separater.py
+* text_generator.py
   + imgs/ディレクトリを元にtraindata.txtとtestdata.txtを作成する
+* image_restorer.py
+  + ETLデータセットから64x64のPNG画像を取得してimgsディレクトリに保存する
 
 ## 動かした環境
 * Ubuntu 14.04LTS
@@ -20,10 +22,8 @@
 ## データ準備
 * [ETLデータセット](http://etlcdb.db.aist.go.jp/?page_id=2461)  
 * 上記からダウンロードしてください
-* サイトに画像復元のPythonスクリプトの記載があります
-* 各画像をimgsディレクトリを作って保存してください
-  + ファイル名は「ETL8B2_${ラベル番号}_${連番}.png」としてください
-  + 例：「ETL8B2_00_000.png」
+* zipを解答して、image_restorer.pyを実行するとimgsに画像が保存されます
+* 任意：text_generator.pyを実行すると、新しいtraindata.txtとtestdata.txtが作成されます）
 
 ## 使い方
 例えば、以下の引数で実行するとGPU0番で10epochの学習を実施します
