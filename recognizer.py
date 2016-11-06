@@ -19,7 +19,7 @@ class CNNSample(chainer.Chain):
             conv3=L.Convolution2D(None, 64, 3),
             conv4=L.Convolution2D(None, 64, 3),
             l1=L.Linear(None, 256),
-            l2=L.Linear(None, 75),
+            l2=L.Linear(None, 71),
         )
         self.train = False
 
@@ -42,9 +42,7 @@ class CNNSample(chainer.Chain):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--imglist', help='text file', default='testdata.txt')
-    # parser.add_argument('--initmodel', default='result.cnn/model_epoch_500',
-    #                     help='Initialize the model from given file')
-    parser.add_argument('--initmodel', default='result.cnn2/model_epoch_500',
+    parser.add_argument('--initmodel', default='result/model_epoch_500',
                         help='Initialize the model from given file')
     parser.add_argument('--outfile', '-o', default='output.csv',
                         help='output text file name')
@@ -86,7 +84,7 @@ def main():
         ret = model(x).data[0]
 
         # calc top3
-        rets = zip(range(0, 75), ret)
+        rets = zip(range(0, 71), ret)
         rets = sorted(rets, key=lambda x: x[1], reverse=True)
 
         pred_idx, _ = rets[0]
