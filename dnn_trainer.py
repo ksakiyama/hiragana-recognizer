@@ -76,7 +76,7 @@ class CNNSample(chainer.Chain):
         h = F.dropout(h, train=self.train)
 
         h = F.dropout(F.relu(self.l1(h)), train=self.train)
-        h = F.relu(self.l2(h))
+        h = self.l2(h)
         loss = F.softmax_cross_entropy(h, t)
         chainer.report({'loss': loss, 'accuracy': F.accuracy(h, t)}, self)
         return loss
