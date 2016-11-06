@@ -1,4 +1,5 @@
 import os
+import cv2
 import struct
 from PIL import Image
 
@@ -38,5 +39,10 @@ with open(filename, 'rb') as f:
             fn = 'ETL8B2_{:03d}_{:03d}.png'.format(idx, i)
             fn = os.path.join(dstdir, subdir, fn)
             iI.save(fn, 'PNG')
+
+            # resize 64x64 --> 32x32
+            img = cv2.imread(fn)
+            img = cv2.resize(img, (32, 32))
+            cv2.imwrite(fn, img)
 
         idx += 1
