@@ -60,7 +60,7 @@ class CNNSample(chainer.Chain):
             conv3=L.Convolution2D(None, 64, 3),
             conv4=L.Convolution2D(None, 64, 3),
             l1=L.Linear(None, 256),
-            l2=L.Linear(None, 75),
+            l2=L.Linear(None, 71),
         )
         self.train = True
 
@@ -114,7 +114,6 @@ class HiraganaDataset(chainer.dataset.DatasetMixin):
     def _read_gray_image_as_array(self, imgpath):
         crop_size = self.crop_size
         cvimg = cv2.imread(imgpath, 0)
-        cvimg = cv2.resize(cvimg, (crop_size, crop_size))
         cvimg = cvimg.astype(np.float32)
         cvimg = cvimg / 255
         return cvimg.reshape(crop_size, crop_size, 1)
@@ -175,8 +174,6 @@ def main():
                         help='Number of epochs to train')
     parser.add_argument('--gpu', '-g', type=int, default=-1,
                         help='GPU ID (negative value indicates CPU')
-    parser.add_argument('--loaderjob', '-j', type=int,
-                        help='Number of parallel data loading processes')
     parser.add_argument('--initmodel', default='',
                         help='Initialize the model from given file')
     parser.add_argument('--resume', '-r', default='',
@@ -229,12 +226,14 @@ def main():
     trainer.extend(extensions.dump_graph('main/loss'))
 
     # 定期的にオブジェクトを保存する
+    every_epoch = (1, 'epoch')
     trainer.extend(extensions.snapshot(
-        filename='trainer_{.updater.epoch}'), trigger=(1, 'epoch'))
+        filename='trainer_{.updater.epoch}'), trigger=every_epoch)
     trainer.extend(extensions.snapshot_object(
-        model, 'model_epoch_{.updater.epoch}'), trigger=(10, 'epoch'))
+        model, 'model_epoch_{.updater.epoch}'), trigger=every_epoch)
     trainer.extend(extensions.snapshot_object(
-        optimizer, 'optimizer_epoch_{.updater.iteration}'), trigger=(10, 'epoch'))
+        optimizer, 'optimizer_epoch_{.updater.iteration}'),
+        trigger=every_epoch)
 
     # 毎epochでログ出力
     trainer.extend(extensions.LogReport())
