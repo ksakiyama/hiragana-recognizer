@@ -18,10 +18,9 @@ def fild_all_files(directory):
 def save_text(textnm, images):
     with open(textnm, 'w') as f:
         for imgnm in sorted(images):
-            imgpath = os.path.join(srcdir, imgnm)
             label = imgnm.split('_')[1]
             label = int(label)
-            f.write("{} {}\n".format(imgpath, str(label)))
+            f.write("{} {}\n".format(imgnm, str(label)))
 
 
 def main():
