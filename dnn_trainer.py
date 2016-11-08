@@ -35,7 +35,7 @@ class MLP(chainer.Chain):
             # the size of the inputs to each layer will be inferred
             l1=L.Linear(None, 1024),  # n_in -> n_units
             l2=L.Linear(None, 1024),  # n_units -> n_units
-            l3=L.Linear(None, 75),  # n_units -> n_out
+            l3=L.Linear(None, 71),  # n_units -> n_out
         )
 
     def __call__(self, x, t):
