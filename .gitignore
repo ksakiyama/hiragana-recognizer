@@ -1,6 +1,7 @@
 imgs/
-result/
+result*/
 zips/
 ETL*/
 old
 *tar.gz
+__pycache__
