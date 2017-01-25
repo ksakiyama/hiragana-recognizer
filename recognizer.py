@@ -44,7 +44,7 @@ def main():
             images_lndexes.append((imgpath, int(labelidx)))
 
     # モデルをロードする
-    model = model = archs[args.arch]()
+    model = archs[args.arch]()
     model.train = False
     model.predict = True
     chainer.serializers.load_npz(args.initmodel, model)
@@ -79,12 +79,13 @@ def main():
         print("label:{}".format(labeldic[true_index]))
 
         for idx, prob in rets[0:3]:
-            print("{:02d}:{}:{}".format(idx, labeldic[idx], prob))
+            print("{:02d}:{:>2}:{}".format(idx, labeldic[idx], prob))
 
     print('====================')
     print('correct:{}'.format(len(images_lndexes) - counter_wrong))
     print('wrong:{}'.format(counter_wrong))
-    print('accuracy:{:.3f}%'.format(1.0 - counter_wrong / len(images_lndexes)))
+    print('accuracy:{:.3f}%'.format(
+        1.0 - (counter_wrong / len(images_lndexes))))
 
 
 if __name__ == '__main__':
