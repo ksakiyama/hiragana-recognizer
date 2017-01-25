@@ -24,6 +24,7 @@ def main():
 
     archs = {
         'cnn': nets.CNNSample,
+        'cnn2': nets.CNNSample2,
         'cnnbn': nets.CNNSampleBN,
     }
 
@@ -45,9 +46,9 @@ def main():
 
     # モデルをロードする
     model = archs[args.arch]()
+    chainer.serializers.load_npz(args.initmodel, model)
     model.train = False
     model.predict = True
-    chainer.serializers.load_npz(args.initmodel, model)
 
     counter_wrong = 0
 
@@ -55,8 +56,8 @@ def main():
         # read image
         cvimg = cv2.imread(image, 0)
         cvimg = cv2.resize(cvimg, (32, 32))
-        cvimg = cvimg / 255
         cvimg = cvimg.astype(np.float32)
+        cvimg = cvimg / 255
         cvimg = cvimg.reshape(1, 32, 32)
 
         x = chainer.Variable(np.array([cvimg]))

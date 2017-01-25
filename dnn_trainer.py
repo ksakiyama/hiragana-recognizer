@@ -130,6 +130,7 @@ def main():
 
     archs = {
         'cnn': nets.CNNSample,
+        'cnn2': nets.CNNSample2,
         'cnnbn': nets.CNNSampleBN,
     }
 
@@ -146,6 +147,9 @@ def main():
 
     # Setup an optimizer
     optimizer = chainer.optimizers.Adam()
+    # optimizer = chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9)
+    # optimizer = chainer.optimizers.SMORMS3()
+    # optimizer = chainer.optimizers.AdaDelta()
     optimizer.setup(model)
 
     # オリジナルのデータセットクラスを使用
