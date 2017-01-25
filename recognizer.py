@@ -8,35 +8,7 @@ import chainer
 import chainer.functions as F
 import chainer.links as L
 
-
-# CNNを実装したもの
-class CNNSample(chainer.Chain):
-
-    def __init__(self):
-        super(CNNSample, self).__init__(
-            conv1=L.Convolution2D(None, 32, 3),
-            conv2=L.Convolution2D(None, 32, 3),
-            conv3=L.Convolution2D(None, 64, 3),
-            conv4=L.Convolution2D(None, 64, 3),
-            l1=L.Linear(None, 256),
-            l2=L.Linear(None, 71),
-        )
-        self.train = False
-
-    def __call__(self, x):
-        h = F.relu(self.conv1(x))
-        h = F.relu(self.conv2(h))
-        h = F.max_pooling_2d(h, 2, stride=2)
-        h = F.dropout(h, train=self.train)
-
-        h = F.relu(self.conv3(h))
-        h = F.relu(self.conv4(h))
-        h = F.max_pooling_2d(h, 2, stride=2)
-        h = F.dropout(h, train=self.train)
-
-        h = F.dropout(F.relu(self.l1(h)), train=self.train)
-        h = F.relu(self.l2(h))
-        return F.softmax(h)
+import nets
 
 
 def main():
@@ -46,7 +18,14 @@ def main():
                         help='Initialize the model from given file')
     parser.add_argument('--outfile', '-o', default='output.csv',
                         help='output text file name')
+    parser.add_argument('--arch', '-a', default='cnn',
+                        help='Network architecture')
     args = parser.parse_args()
+
+    archs = {
+        'cnn': nets.CNNSample,
+        'cnnbn': nets.CNNSampleBN,
+    }
 
     # Chainerのidxとひらがなの辞書
     labeldic = {}
@@ -65,11 +44,13 @@ def main():
             images_lndexes.append((imgpath, int(labelidx)))
 
     # モデルをロードする
-    model = CNNSample()
-    # model = L.Classifier(CNNSample())
+    model = model = archs[args.arch]()
+    model.train = False
+    model.predict = True
     chainer.serializers.load_npz(args.initmodel, model)
 
-    # 試しに１つ画像を読み込む
+    counter_wrong = 0
+
     for image, true_index in images_lndexes:
         # read image
         cvimg = cv2.imread(image, 0)
@@ -80,23 +61,30 @@ def main():
 
         x = chainer.Variable(np.array([cvimg]))
 
-        # predict
+        # ニューラルネットワークに推論させる
         ret = model(x).data[0]
 
-        # calc top3
+        # 高確率な上位３候補を出すためソート
         rets = zip(range(0, 71), ret)
         rets = sorted(rets, key=lambda x: x[1], reverse=True)
 
-        pred_idx, _ = rets[0]
-        if pred_idx == true_index:
+        # 正解していたらスキップ
+        if rets[0][0] == true_index:
             continue
 
+        # 間違えてしまった内容を表示
+        counter_wrong += 1
         print('====================')
-        print("filename:{}".format(image))
+        print("file:{}".format(image))
         print("label:{}".format(labeldic[true_index]))
 
         for idx, prob in rets[0:3]:
-            print("{}:{}:{}".format(idx, labeldic[idx], prob))
+            print("{:02d}:{}:{}".format(idx, labeldic[idx], prob))
+
+    print('====================')
+    print('correct:{}'.format(len(images_lndexes) - counter_wrong))
+    print('wrong:{}'.format(counter_wrong))
+    print('accuracy:{:.3f}%'.format(1.0 - counter_wrong / len(images_lndexes)))
 
 
 if __name__ == '__main__':

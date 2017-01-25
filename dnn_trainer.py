@@ -13,73 +13,7 @@ from chainer import training
 from chainer.training import extensions
 from chainer.datasets import tuple_dataset
 
-
-class TestModeEvaluator(extensions.Evaluator):
-
-    def evaluate(self):
-        model = self.get_target('main')
-        model.train = False
-        ret = super(TestModeEvaluator, self).evaluate()
-        model.train = True
-        return ret
-
-
-class MLP(chainer.Chain):
-    """
-    Chainerのサンプルから拝借
-    https://github.com/pfnet/chainer/blob/master/examples/mnist/train_mnist.py
-    """
-
-    def __init__(self):
-        super(MLP, self).__init__(
-            # the size of the inputs to each layer will be inferred
-            l1=L.Linear(None, 1024),  # n_in -> n_units
-            l2=L.Linear(None, 1024),  # n_units -> n_units
-            l3=L.Linear(None, 71),  # n_units -> n_out
-        )
-
-    def __call__(self, x, t):
-        h = F.relu(self.l1(x))
-        h = F.relu(self.l2(h))
-        h = self.l3(h)
-        loss = F.softmax_cross_entropy(h, t)
-        chainer.report({'loss': loss, 'accuracy': F.accuracy(h, t)}, self)
-        return loss
-
-
-class CNNSample(chainer.Chain):
-    """
-    CNN実装
-    Conv->Conv->MaxPool->Conv->Conv->MaxPool->FC->FC
-    """
-
-    def __init__(self):
-        super(CNNSample, self).__init__(
-            conv1=L.Convolution2D(None, 32, 3),
-            conv2=L.Convolution2D(None, 32, 3),
-            conv3=L.Convolution2D(None, 64, 3),
-            conv4=L.Convolution2D(None, 64, 3),
-            l1=L.Linear(None, 256),
-            l2=L.Linear(None, 71),
-        )
-        self.train = True
-
-    def __call__(self, x, t):
-        h = F.relu(self.conv1(x))
-        h = F.relu(self.conv2(h))
-        h = F.max_pooling_2d(h, 2, stride=2)
-        h = F.dropout(h, train=self.train)
-
-        h = F.relu(self.conv3(h))
-        h = F.relu(self.conv4(h))
-        h = F.max_pooling_2d(h, 2, stride=2)
-        h = F.dropout(h, train=self.train)
-
-        h = F.dropout(F.relu(self.l1(h)), train=self.train)
-        h = self.l2(h)
-        loss = F.softmax_cross_entropy(h, t)
-        chainer.report({'loss': loss, 'accuracy': F.accuracy(h, t)}, self)
-        return loss
+import nets
 
 
 class HiraganaDataset(chainer.dataset.DatasetMixin):
@@ -160,6 +94,16 @@ class HiraganaDataset(chainer.dataset.DatasetMixin):
         return image.transpose(2, 0, 1), label
 
 
+class TestModeEvaluator(extensions.Evaluator):
+
+    def evaluate(self):
+        model = self.get_target('main')
+        model.train = False
+        ret = super(TestModeEvaluator, self).evaluate()
+        model.train = True
+        return ret
+
+
 def main():
     parser = argparse.ArgumentParser(description='ひらがなの学習')
     parser.add_argument('train', help='Path to training image-label list file')
@@ -185,8 +129,8 @@ def main():
     args = parser.parse_args()
 
     archs = {
-        'cnn': CNNSample,
-        'mlp': MLP
+        'cnn': nets.CNNSample,
+        'cnnbn': nets.CNNSampleBN,
     }
 
     # モデルの初期化
@@ -212,6 +156,11 @@ def main():
     train_iter = chainer.iterators.SerialIterator(train_data, args.batchsize)
     test_iter = chainer.iterators.SerialIterator(
         test_data, args.val_batchsize, repeat=False, shuffle=False)
+    # train_iter = chainer.iterators.MultiprocessIterator(
+    #     train_data, args.batchsize, n_processes=4)
+    # test_iter = chainer.iterators.MultiprocessIterator(
+    #     test_data, args.val_batchsize, repeat=False, shuffle=False,
+    #     n_processes=4)
 
     # trainerを定義
     updater = training.StandardUpdater(train_iter, optimizer, device=args.gpu)
@@ -243,6 +192,9 @@ def main():
 
     # Print a progress bar to stdout
     trainer.extend(extensions.ProgressBar())
+
+    trainer.extend(extensions.dump_graph(
+        root_name="main/loss", out_name="cg.dot"))
 
     if args.resume:
         chainer.serializers.load_npz(args.resume, trainer)
