@@ -147,9 +147,14 @@ def main():
     test_data = HiraganaDataset(args.val, False)
 
     # イテレータ
-    train_iter = chainer.iterators.SerialIterator(train_data, args.batchsize)
-    test_iter = chainer.iterators.SerialIterator(
-        test_data, args.val_batchsize, repeat=False, shuffle=False)
+    # train_iter = chainer.iterators.SerialIterator(train_data, args.batchsize)
+    # test_iter = chainer.iterators.SerialIterator(
+    #     test_data, args.val_batchsize, repeat=False, shuffle=False)
+    train_iter = chainer.iterators.MultiprocessIterator(
+        train_data, args.batchsize, n_processes=4)
+    test_iter = chainer.iterators.MultiprocessIterator(
+        test_data, args.val_batchsize, repeat=False, shuffle=False,
+        n_processes=4)
 
     # trainerを定義
     updater = training.StandardUpdater(train_iter, optimizer, device=args.gpu)

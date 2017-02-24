@@ -7,10 +7,10 @@ class MLP(chainer.Chain):
 
     def __init__(self):
         super(MLP, self).__init__(
-            # the size of the inputs to each layer will be inferred
-            l1=L.Linear(None, 2048),
-            l2=L.Linear(None, 2048),
-            l3=L.Linear(None, 71),
+            l1=L.Linear(None, 1024),
+            l2=L.Linear(None, 1024),
+            l3=L.Linear(None, 256),
+            l4=L.Linear(None, 71),
         )
         self.predict = False
 
@@ -24,9 +24,10 @@ class MLP(chainer.Chain):
             return F.softmax(h)
 
     def compute(self, x):
-        h1 = F.relu(self.l1(x))
-        h2 = F.relu(self.l2(h1))
-        return self.l3(h2)
+        h = F.relu(self.l1(x))
+        h = F.relu(self.l2(h))
+        h = F.relu(self.l3(h))
+        return self.l4(h)
 
 
 class ConvNet(chainer.Chain):
