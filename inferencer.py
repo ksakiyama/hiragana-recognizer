@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 import os
 import sys
 import argparse
-import cv2
+from PIL import Image
 import numpy as np
 import chainer
 import chainer.functions as F
@@ -13,7 +12,7 @@ import nets
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--imglist', help='text file', default='testdata.txt')
+    parser.add_argument('val', help='text file')
     parser.add_argument('--initmodel', default='result/model_epoch_500',
                         help='Initialize the model from given file')
     parser.add_argument('--outfile', '-o', default='output.csv',
@@ -23,71 +22,69 @@ def main():
     args = parser.parse_args()
 
     archs = {
-        'cnn': nets.CNNSample,
-        'cnn2': nets.CNNSample2,
-        'cnnbn': nets.CNNSampleBN,
+        'mlp': nets.MLP,
+        'cnn': nets.ConvNet,
+        'cnnbn': nets.ConvNetBN,
     }
 
-    # Chainerのidxとひらがなの辞書
-    labeldic = {}
-    with open('labels.txt', 'r') as f:
-        for idx, line in enumerate(f.readlines()):
-            c = line.rstrip('\n')
-            labeldic[int(idx)] = c
-
-    # テスト画像のリストを取得
-    images_lndexes = []
-    with open(args.imglist, 'r') as f:
-        for line in f.readlines():
-            imgpath, labelidx = line.split(' ')
-            labelidx = labelidx.rstrip('\n')
-            # print("{}:{}".format(imgpath, labelidx))
-            images_lndexes.append((imgpath, int(labelidx)))
+    model = archs[args.arch]()
 
     # モデルをロードする
-    model = archs[args.arch]()
     chainer.serializers.load_npz(args.initmodel, model)
     model.train = False
     model.predict = True
 
+    # Chainerのidxとひらがなの辞書
+    labels = {}
+    with open('labels.txt', 'r') as f:
+        for idx, line in enumerate(f.readlines()):
+            c = line.rstrip('\n')
+            labels[int(idx)] = c
+
+    counter_correct = 0
     counter_wrong = 0
 
-    for image, true_index in images_lndexes:
-        # read image
-        cvimg = cv2.imread(image, 0)
-        cvimg = cv2.resize(cvimg, (32, 32))
-        cvimg = cvimg.astype(np.float32)
-        cvimg = cvimg / 255
-        cvimg = cvimg.reshape(1, 32, 32)
+    with open(args.val, 'r') as f:
+        for line in f.readlines():
+            imgpath, idx = line.split(' ')
+            idx = int(idx.rstrip('\n'))
+            label = labels[idx]
 
-        x = chainer.Variable(np.array([cvimg]))
+            # 画像読込
+            image = Image.open(imgpath)
+            image = image.convert("L")  # グレースケール
+            image = np.asarray(image, dtype=np.float32) / 255  # numpy形式
+            image = image.reshape(32, 32, 1)                   # [32,32,1]
+            image = image.transpose(2, 0, 1)                   # [1,32,32]
 
-        # ニューラルネットワークに推論させる
-        ret = model(x).data[0]
+            # Chainer形式に変換
+            x = chainer.Variable(np.array([image]))
 
-        # 高確率な上位３候補を出すためソート
-        rets = zip(range(0, 71), ret)
-        rets = sorted(rets, key=lambda x: x[1], reverse=True)
+            # ニューラルネットワークに推論させる
+            ret = model(x).data[0]
 
-        # 正解していたらスキップ
-        if rets[0][0] == true_index:
-            continue
+            # 高確率な上位３候補を出すためソート
+            rets = zip(range(0, 71), ret)
+            rets = sorted(rets, key=lambda x: x[1], reverse=True)
 
-        # 間違えてしまった内容を表示
-        counter_wrong += 1
-        print('====================')
-        print("file:{}".format(image))
-        print("label:{}".format(labeldic[true_index]))
+            # 正解していたらスキップ
+            if labels[rets[0][0]] == label:
+                counter_correct += 1
+            else:
+                # 間違えてしまった内容を表示
+                counter_wrong += 1
+                print('============================')
+                print("File:{}".format(imgpath))
+                print("Label:{}".format(label))
 
-        for idx, prob in rets[0:3]:
-            print("{:02d}:{:>2}:{}".format(idx, labeldic[idx], prob))
+                # 上位３を表示
+                for i, prob in rets[0:3]:
+                    print("{:02d}:{:>2}:{}".format(i, labels[i], prob))
 
-    print('====================')
-    print('correct:{}'.format(len(images_lndexes) - counter_wrong))
-    print('wrong:{}'.format(counter_wrong))
-    print('accuracy:{:.3f}%'.format(
-        1.0 - (counter_wrong / len(images_lndexes))))
-
+    print('============================')
+    print('accuracy:{:.3f}%({:}/{:})'.format(
+        1.0 - (counter_wrong / (counter_correct + counter_wrong)),
+        counter_correct, counter_correct + counter_wrong))
 
 if __name__ == '__main__':
     main()

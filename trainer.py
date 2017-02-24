@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 import os
 import sys
 import random
 import argparse
 import numpy as np
-import cv2
+from PIL import Image
 
 import chainer
 import chainer.functions as F
@@ -21,7 +20,7 @@ class HiraganaDataset(chainer.dataset.DatasetMixin):
     グレースケールの32x32ひらがな画像を読込む
     """
 
-    def __init__(self, path, root, random=True):
+    def __init__(self, path, random=True):
         canvas_size = 40
         crop_size = 32
 
@@ -45,13 +44,6 @@ class HiraganaDataset(chainer.dataset.DatasetMixin):
     def __len__(self):
         return len(self.base)
 
-    def _read_gray_image_as_array(self, imgpath):
-        crop_size = self.crop_size
-        cvimg = cv2.imread(imgpath, 0)
-        cvimg = cvimg.astype(np.float32)
-        cvimg = cvimg / 255
-        return cvimg.reshape(crop_size, crop_size, 1)
-
     def get_example(self, i):
         crop_size = self.crop_size
         canvas_size = self.canvas_size
@@ -59,42 +51,35 @@ class HiraganaDataset(chainer.dataset.DatasetMixin):
         end = self.end
 
         imgpath, label = self.base[i]
-        image = self._read_gray_image_as_array(imgpath)
+        image = Image.open(imgpath)
+        image = image.convert("L")  # グレースケール
         label = np.int32(label)
 
-        # -10〜10度で回転させ、そこからクロッピングする
-        if self.random:
-            # 40x40のキャンバスの中央に文字貼り付け
-            canvas = np.copy(self.canvas)
-            canvas[start:end, start:end, :] = image
-            image = canvas
+        if random:
+            # 40x40に画像を大きくしてから32x32を抽出する
+            canvas = Image.new('L', (canvas_size, canvas_size), 255)
+            canvas.paste(image,
+                         (int((canvas_size - crop_size) / 2),
+                          int((canvas_size - crop_size) / 2)))
 
-            # いったん白黒を反転（warpAffineの背景が黒のため仕方なく。。）
-            image = 1 - image
-
-            # 乱数で回転を実施
-            rotate = random.randint(-10, 10)
-            rotation_matrix = cv2.getRotationMatrix2D(
-                (canvas_size / 2, canvas_size / 2), rotate, 1)
-            image = cv2.warpAffine(
-                image, rotation_matrix, (canvas_size, canvas_size))
-
-            # 白黒を元に戻す
-            image = 1 - image
-
-            # 32x32を抜き出す
-            dif = canvas_size - crop_size - 2
-            top = random.randint(0, dif)
-            left = random.randint(0, dif)
+            top = random.randint(0, canvas_size - crop_size - 1)
+            left = random.randint(0, canvas_size - crop_size - 1)
             bottom = top + crop_size
             right = left + crop_size
-            image = image[top:bottom, left:right]
-            image = image.reshape(crop_size, crop_size, 1)
 
-        return image.transpose(2, 0, 1), label
+            image = canvas.crop((left, top, right, bottom))
+
+        # TODO -1から1
+        image = np.asarray(image, dtype=np.float32) / 255  # numpy形式
+        image = image.reshape(crop_size, crop_size, 1)     # [32,32,1]
+        image = image.transpose(2, 0, 1)                   # [1,32,32]
+        return image, label
 
 
 class TestModeEvaluator(extensions.Evaluator):
+    """
+    モデルを評価するためのラッパー。
+    """
 
     def evaluate(self):
         model = self.get_target('main')
@@ -105,19 +90,21 @@ class TestModeEvaluator(extensions.Evaluator):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='ひらがなの学習')
+    # ここで実行時の引数を設定できます
+    # 例：python trainer.py --arch cnn --epoch 10 --gpu 0 [学習データ] [テストデータ]
+    parser = argparse.ArgumentParser()
     parser.add_argument('train', help='Path to training image-label list file')
     parser.add_argument('val', help='Path to validation image-label list file')
-    parser.add_argument('--root', '-R', default='.',
-                        help='Root directory path of image files')
     parser.add_argument('--batchsize', '-B', type=int, default=2048,
                         help='Learning minibatch size')
     parser.add_argument('--val_batchsize', '-b', type=int, default=1024,
                         help='Validation minibatch size')
     parser.add_argument('--epoch', '-E', type=int, default=500,
                         help='Number of epochs to train')
-    parser.add_argument('--gpu', '-g', type=int, default=-1,
+    parser.add_argument('--gpu', '-g', type=int, default=0,
                         help='GPU ID (negative value indicates CPU')
+    parser.add_argument('--cpu', '-c', action='store_true',
+                        help='CPU mode')
     parser.add_argument('--initmodel', default='',
                         help='Initialize the model from given file')
     parser.add_argument('--resume', '-r', default='',
@@ -128,24 +115,27 @@ def main():
                         help='Output directory')
     args = parser.parse_args()
 
+    # ネットワーク定義はnets.pyを参照
     archs = {
-        'cnn': nets.CNNSample,
-        'cnn2': nets.CNNSample2,
-        'cnnbn': nets.CNNSampleBN,
+        'mlp': nets.MLP,
+        'cnn': nets.ConvNet,
+        'cnnbn': nets.ConvNetBN,
     }
 
-    # モデルの初期化
     model = archs[args.arch]()
 
+    # 学習済みモデルがあればそれをロード
     if args.initmodel:
         chainer.serializers.load_npz(args.initmodel, model)
 
-    # GPUを使う場合
-    if args.gpu >= 0:
+    if args.cpu:
+        args.gpu = -1
+    else:
         chainer.cuda.get_device(args.gpu).use()  # Make a specified GPU current
         model.to_gpu()  # Copy the model to the GPU
 
-    # Setup an optimizer
+    # TODO
+    # 最適化アルゴリズムを設定
     optimizer = chainer.optimizers.Adam()
     # optimizer = chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9)
     # optimizer = chainer.optimizers.SMORMS3()
@@ -153,18 +143,13 @@ def main():
     optimizer.setup(model)
 
     # オリジナルのデータセットクラスを使用
-    train_data = HiraganaDataset(args.train, args.root)
-    test_data = HiraganaDataset(args.val, args.root, False)
+    train_data = HiraganaDataset(args.train)
+    test_data = HiraganaDataset(args.val, False)
 
     # イテレータ
     train_iter = chainer.iterators.SerialIterator(train_data, args.batchsize)
     test_iter = chainer.iterators.SerialIterator(
         test_data, args.val_batchsize, repeat=False, shuffle=False)
-    # train_iter = chainer.iterators.MultiprocessIterator(
-    #     train_data, args.batchsize, n_processes=4)
-    # test_iter = chainer.iterators.MultiprocessIterator(
-    #     test_data, args.val_batchsize, repeat=False, shuffle=False,
-    #     n_processes=4)
 
     # trainerを定義
     updater = training.StandardUpdater(train_iter, optimizer, device=args.gpu)
@@ -174,11 +159,9 @@ def main():
     trainer.extend(TestModeEvaluator(test_iter, model, device=args.gpu),
                    trigger=(1, 'epoch'))
 
-    # Dump a computational graph from 'loss' variable at the first iteration
-    # The "main" refers to the target link of the "main" optimizer.
     trainer.extend(extensions.dump_graph('main/loss'))
 
-    # 定期的にオブジェクトを保存する
+    # 毎epochでオブジェクトを保存
     every_epoch = (1, 'epoch')
     trainer.extend(extensions.snapshot(
         filename='trainer_{.updater.epoch}'), trigger=every_epoch)
@@ -194,15 +177,17 @@ def main():
         ['epoch', 'main/loss', 'validation/main/loss',
          'main/accuracy', 'validation/main/accuracy']))
 
-    # Print a progress bar to stdout
+    # 学習状況をかっこよく表示
     trainer.extend(extensions.ProgressBar())
 
     trainer.extend(extensions.dump_graph(
         root_name="main/loss", out_name="cg.dot"))
 
+    # 学習を途中から再開する場合に使用
     if args.resume:
         chainer.serializers.load_npz(args.resume, trainer)
 
+    # 学習開始
     trainer.run()
 
 if __name__ == '__main__':
