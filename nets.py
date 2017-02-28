@@ -7,6 +7,7 @@ class MLP(chainer.Chain):
 
     def __init__(self):
         super(MLP, self).__init__(
+            # 入力channelにNoneを指定すると自動で計算される
             l1=L.Linear(None, 1024),
             l2=L.Linear(None, 1024),
             l3=L.Linear(None, 256),
@@ -17,16 +18,21 @@ class MLP(chainer.Chain):
     def __call__(self, x, t=None):
         h = self.compute(x)
         if not self.predict:
+            # 学習の場合は損失の値を返す
             loss = F.softmax_cross_entropy(h, t)
             chainer.report({'loss': loss, 'accuracy': F.accuracy(h, t)}, self)
             return loss
         else:
+            # 推論の場合はsoftmaxで確立を返す
             return F.softmax(h)
 
     def compute(self, x):
-        h = F.relu(self.l1(x))
-        h = F.relu(self.l2(h))
-        h = F.relu(self.l3(h))
+        h = self.l1(x)
+        h = F.relu(h)
+        h = self.l2(h)
+        h = F.relu(h)
+        h = self.l3(h)
+        h = F.relu(h)
         return self.l4(h)
 
 

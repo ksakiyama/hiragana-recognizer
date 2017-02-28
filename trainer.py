@@ -69,8 +69,8 @@ class HiraganaDataset(chainer.dataset.DatasetMixin):
 
             image = canvas.crop((left, top, right, bottom))
 
-        # TODO -1から1
-        image = np.asarray(image, dtype=np.float32) / 255  # numpy形式
+        # [-1.0, 1.0]の範囲に値を変換する
+        image = (np.asarray(image, dtype=np.float32) - 127) / 128  # numpy形式
         image = image.reshape(crop_size, crop_size, 1)     # [32,32,1]
         image = image.transpose(2, 0, 1)                   # [1,32,32]
         return image, label
@@ -95,7 +95,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('train', help='Path to training image-label list file')
     parser.add_argument('val', help='Path to validation image-label list file')
-    parser.add_argument('--batchsize', '-B', type=int, default=2048,
+    parser.add_argument('--batchsize', '-B', type=int, default=1024,
                         help='Learning minibatch size')
     parser.add_argument('--val_batchsize', '-b', type=int, default=1024,
                         help='Validation minibatch size')
@@ -109,7 +109,7 @@ def main():
                         help='Initialize the model from given file')
     parser.add_argument('--resume', '-r', default='',
                         help='Initialize the trainer from given file')
-    parser.add_argument('--arch', '-a', default='cnn',
+    parser.add_argument('--arch', '-a', default='mlp',
                         help='Network architecture')
     parser.add_argument('--out', '-o', default='result',
                         help='Output directory')
@@ -135,7 +135,7 @@ def main():
         model.to_gpu()  # Copy the model to the GPU
 
     # TODO
-    # 最適化アルゴリズムを設定
+    # いろいろな最適化アルゴリズムを試してみましょう
     optimizer = chainer.optimizers.Adam()
     # optimizer = chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9)
     # optimizer = chainer.optimizers.SMORMS3()
@@ -185,6 +185,7 @@ def main():
     # 学習状況をかっこよく表示
     trainer.extend(extensions.ProgressBar())
 
+    # 学習の様子をグラフとして保存
     trainer.extend(extensions.dump_graph(
         root_name="main/loss", out_name="cg.dot"))
 
