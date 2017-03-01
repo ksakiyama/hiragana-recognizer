@@ -61,18 +61,18 @@ class ConvNet(chainer.Chain):
         h = self.conv2(h)
         h = F.relu(h)
         h = F.max_pooling_2d(h, 2, stride=2)
-        #h = F.dropout(h, train=self.train)
+        h = F.dropout(h, train=self.train)
 
         h = self.conv3(h)
         h = F.relu(h)
         h = self.conv4(h)
         h = F.relu(h)
         h = F.max_pooling_2d(h, 2, stride=2)
-        #h = F.dropout(h, train=self.train)
+        h = F.dropout(h, train=self.train)
 
         h = self.l1(h)
         h = F.relu(h)
-        #h = F.dropout(h, train=self.train)
+        h = F.dropout(h, train=self.train)
         h = self.l2(h)
         return h
 
@@ -90,6 +90,12 @@ class ConvNetBN(chainer.Chain):
             conv2=L.Convolution2D(None, 32, 3),
             conv3=L.Convolution2D(None, 64, 3),
             conv4=L.Convolution2D(None, 64, 3),
+            conv5=L.Convolution2D(None, 128, 3),
+            conv6=L.Convolution2D(None, 128, 3),
+            conv7=L.Convolution2D(None, 128, 3),
+            conv8=L.Convolution2D(None, 128, 3),
+            conv7=L.Convolution2D(None, 64, 3),
+            conv8=L.Convolution2D(None, 64, 3),
             l1=L.Linear(None, 256),
             l2=L.Linear(None, 71),
             bn1=L.BatchNormalization(32),
