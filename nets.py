@@ -25,11 +25,7 @@ class MLP(chainer.Chain):
 
     def compute(self, x):
         # TODO ネットワーク構造を変えてみて、実行してみましょう
-        h = self.l1(x)
-        h = F.relu(h)
-        h = self.l2(h)
-        h = F.relu(h)
-        return self.l3(h)
+        return self.l1(x)
 
 
 class ConvNet(chainer.Chain):
