@@ -56,6 +56,7 @@ class HiraganaDataset(chainer.dataset.DatasetMixin):
         label = np.int32(label)
 
         if random:
+            # クロッピング
             # 40x40に画像を大きくしてから32x32を抽出する
             canvas = Image.new('L', (canvas_size, canvas_size), 255)
             canvas.paste(image,
@@ -143,7 +144,8 @@ def main():
     optimizer.setup(model)
 
     # オリジナルのデータセットクラスを使用
-    train_data = HiraganaDataset(args.train)
+    # TODO クロッピングを有効にしてみましょう
+    train_data = HiraganaDataset(args.train, False)
     test_data = HiraganaDataset(args.val, False)
 
     # イテレータ

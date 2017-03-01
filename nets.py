@@ -8,6 +8,7 @@ class MLP(chainer.Chain):
     def __init__(self):
         super(MLP, self).__init__(
             # 入力channelにNoneを指定すると自動で計算される
+            # TODO ネットワーク構造を変えてみて、実行してみましょう
             l1=L.Linear(None, 1024),
             l2=L.Linear(None, 1024),
             l3=L.Linear(None, 256),
