@@ -26,9 +26,9 @@ class MLP(chainer.Chain):
     def compute(self, x):
         # TODO ネットワーク構造を変えてみて、実行してみましょう
         h = self.l1(x)
-        h = F.sigmoid(h)
+        h = F.relu(h)
         h = self.l2(h)
-        h = F.sigmoid(h)
+        h = F.relu(h)
         return self.l3(h)
 
 
@@ -94,8 +94,8 @@ class ConvNetBN(chainer.Chain):
             conv2=L.Convolution2D(None, 32, 3),
             conv3=L.Convolution2D(None, 64, 3),
             conv4=L.Convolution2D(None, 64, 3),
-            l1=L.Linear(None, 256, wscale=0.5),
-            l2=L.Linear(None, 71, wscale=0.5),
+            l1=L.Linear(None, 256),
+            l2=L.Linear(None, 71),
             bn1=L.BatchNormalization(32),
             bn2=L.BatchNormalization(64),
             bn3=L.BatchNormalization(256),
@@ -128,5 +128,4 @@ class ConvNetBN(chainer.Chain):
         h = F.relu(self.l1(h))
         # h = F.dropout(h, train=self.train)
         h = self.bn3(h, test=test)
-        h = self.l2(h)
-        return h
+        return self.l2(h)
