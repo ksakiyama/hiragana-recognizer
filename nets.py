@@ -7,12 +7,8 @@ class MLP(chainer.Chain):
 
     def __init__(self):
         super(MLP, self).__init__(
-            # 入力channelにNoneを指定すると自動で計算される
             # TODO ネットワーク構造を変えてみて、実行してみましょう
-            l1=L.Linear(None, 1024),
-            l2=L.Linear(None, 1024),
-            l3=L.Linear(None, 256),
-            l4=L.Linear(None, 71),
+            l1=L.Linear(1024, 71),
         )
         self.predict = False
 
@@ -28,13 +24,12 @@ class MLP(chainer.Chain):
             return F.softmax(h)
 
     def compute(self, x):
+        # TODO ネットワーク構造を変えてみて、実行してみましょう
         h = self.l1(x)
-        h = F.relu(h)
+        h = F.sigmoid(h)
         h = self.l2(h)
-        h = F.relu(h)
-        h = self.l3(h)
-        h = F.relu(h)
-        return self.l4(h)
+        h = F.sigmoid(h)
+        return self.l3(h)
 
 
 class ConvNet(chainer.Chain):
@@ -70,18 +65,18 @@ class ConvNet(chainer.Chain):
         h = self.conv2(h)
         h = F.relu(h)
         h = F.max_pooling_2d(h, 2, stride=2)
-        h = F.dropout(h, train=self.train)
+        #h = F.dropout(h, train=self.train)
 
         h = self.conv3(h)
         h = F.relu(h)
         h = self.conv4(h)
         h = F.relu(h)
         h = F.max_pooling_2d(h, 2, stride=2)
-        h = F.dropout(h, train=self.train)
+        #h = F.dropout(h, train=self.train)
 
         h = self.l1(h)
         h = F.relu(h)
-        h = F.dropout(h, train=self.train)
+        #h = F.dropout(h, train=self.train)
         h = self.l2(h)
         return h
 

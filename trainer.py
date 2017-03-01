@@ -137,10 +137,10 @@ def main():
 
     # TODO
     # いろいろな最適化アルゴリズムを試してみましょう
-    optimizer = chainer.optimizers.Adam()
+    # optimizer = chainer.optimizers.Adam()
     # optimizer = chainer.optimizers.MomentumSGD(lr=0.01, momentum=0.9)
     # optimizer = chainer.optimizers.SMORMS3()
-    # optimizer = chainer.optimizers.AdaDelta()
+    optimizer = chainer.optimizers.AdaDelta()
     optimizer.setup(model)
 
     # オリジナルのデータセットクラスを使用
@@ -149,9 +149,6 @@ def main():
     test_data = HiraganaDataset(args.val, False)
 
     # イテレータ
-    # train_iter = chainer.iterators.SerialIterator(train_data, args.batchsize)
-    # test_iter = chainer.iterators.SerialIterator(
-    #     test_data, args.val_batchsize, repeat=False, shuffle=False)
     train_iter = chainer.iterators.MultiprocessIterator(
         train_data, args.batchsize, n_processes=4)
     test_iter = chainer.iterators.MultiprocessIterator(
@@ -162,21 +159,17 @@ def main():
     updater = training.StandardUpdater(train_iter, optimizer, device=args.gpu)
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
 
-    # テスト用のイテレータを登録
+    every_epoch = (1, 'epoch')
+
+    # テスト用のイテレータを登録、枚epochで動作
     trainer.extend(TestModeEvaluator(test_iter, model, device=args.gpu),
-                   trigger=(1, 'epoch'))
+                   trigger=every_epoch)
 
     trainer.extend(extensions.dump_graph('main/loss'))
 
-    # 毎epochでオブジェクトを保存
-    every_epoch = (1, 'epoch')
-    trainer.extend(extensions.snapshot(
-        filename='trainer_{.updater.epoch}'), trigger=every_epoch)
+    # 毎epochで学習したモデルを保存
     trainer.extend(extensions.snapshot_object(
         model, 'model_epoch_{.updater.epoch}'), trigger=every_epoch)
-    trainer.extend(extensions.snapshot_object(
-        optimizer, 'optimizer_epoch_{.updater.iteration}'),
-        trigger=every_epoch)
 
     # 毎epochでログ出力
     trainer.extend(extensions.LogReport())
