@@ -55,7 +55,7 @@ class HiraganaDataset(chainer.dataset.DatasetMixin):
         image = image.convert("L")  # グレースケール
         label = np.int32(label)
 
-        if random:
+        if self.random:
             # クロッピング
             # 40x40に画像を大きくしてから32x32を抽出する
             canvas = Image.new('L', (canvas_size, canvas_size), 255)
