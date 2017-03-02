@@ -94,7 +94,7 @@ class ConvNetBN(chainer.Chain):
             l2=L.Linear(None, 71),
             bn1=L.BatchNormalization(32),
             bn2=L.BatchNormalization(64),
-            bn3=L.BatchNormalization(256),
+            # bn3=L.BatchNormalization(256),
         )
         self.train = True
         self.predict = False
@@ -122,6 +122,6 @@ class ConvNetBN(chainer.Chain):
         h = self.bn2(h, test=test)
 
         h = F.relu(self.l1(h))
-        # h = F.dropout(h, train=self.train)
-        h = self.bn3(h, test=test)
+        h = F.dropout(h, train=self.train)
+        # h = self.bn3(h, test=test)
         return self.l2(h)
