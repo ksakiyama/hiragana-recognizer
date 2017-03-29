@@ -145,7 +145,7 @@ def main():
 
     # オリジナルのデータセットクラスを使用
     # TODO クロッピングを有効にしてみましょう
-    train_data = HiraganaDataset(args.train, False)
+    train_data = HiraganaDataset(args.train, True)
     test_data = HiraganaDataset(args.val, False)
 
     # イテレータ
